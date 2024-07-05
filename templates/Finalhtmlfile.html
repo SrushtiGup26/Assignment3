@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Records</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+        form {
+            background-color: #ffffff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #495057;
+        }
+        input[type="text"], input[type="date"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus {
+            border-color: #007bff;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        h2 {
+            color: #343a40;
+            margin-bottom: 10px;
+        }
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .search-container input[type=text] {
+            width: 200px;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        table {
+            width: 100%;
+            max-width: 800px;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f3f5;
+        }
+        .delete-button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .delete-button:hover {
+            background-color: #c82333;
+        }
+    </style>
+    <script>
+        function addStudent() {
+            const firstName = document.getElementById('first_name').value;
+            const lastName = document.getElementById('last_name').value;
+            const dob = document.getElementById('dob').value;
+            const amountDue = document.getElementById('amount_due').value;
+
+            const student = {
+                first_name: firstName,
+                last_name: lastName,
+                dob: dob,
+                amount_due: amountDue
+            };
+
+            fetch('/students', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(student)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('studentForm').reset();
+                fetchStudents();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to add student');
+            });
+        }
+
+        function fetchStudents() {
+            fetch('/students')
+                .then(response => response.json())
+                .then(data => {
+                    const studentTableBody = document.getElementById('studentTableBody');
+                    studentTableBody.innerHTML = ''; 
+                    data.forEach(student => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${student.student_id}</td>
+                            <td>${student.first_name}</td>
+                            <td>${student.last_name}</td>
+                            <td>${student.dob}</td>
+                            <td>${student.amount_due}</td>
+                            <td>
+                                <button class="delete-button" onclick="deleteStudent(${student.student_id})">Delete</button>
+                            </td>
+                        `;
+                        row.addEventListener('click', () => {
+                            populateUpdateForm(student);
+                        });
+                        studentTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to fetch students');
+                });
+        }
+
+        function populateUpdateForm(student) {
+            document.getElementById('update_id').value = student.student_id;
+            document.getElementById('update_first_name').value = student.first_name;
+            document.getElementById('update_last_name').value = student.last_name;
+            document.getElementById('update_dob').value = student.dob;
+            document.getElementById('update_amount_due').value = student.amount_due;
+        }
+
+        function searchAndUpdate() {
+            const searchFirstName = document.getElementById('search_first_name').value;
+
+            fetch(`/students/search/${searchFirstName}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data) {
+                        document.getElementById('update_id').value = data.student_id;
+                        document.getElementById('update_first_name').value = data.first_name;
+                        document.getElementById('update_last_name').value = data.last_name;
+                        document.getElementById('update_dob').value = data.dob;
+                        document.getElementById('update_amount_due').value = data.amount_due;
+                    } else {
+                        alert('Student not found');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to search student');
+                });
+        }
+
+        function updateStudent() {
+            const studentId = document.getElementById('update_id').value;
+            const firstName = document.getElementById('update_first_name').value;
+            const lastName = document.getElementById('update_last_name').value;
+            const dob = document.getElementById('update_dob').value;
+            const amountDue = document.getElementById('update_amount_due').value;
+
+            const student = {
+                first_name: firstName,
+                last_name: lastName,
+                dob: dob,
+                amount_due: amountDue
+            };
+
+            fetch(`/students/${studentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(student)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                fetchStudents();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update student');
+            });
+        }
+
+        function deleteStudent(studentId) {
+            if (confirm('Are you sure you want to delete this student?')) {
+                fetch(`/students/${studentId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    fetchStudents();
+                    clearUpdateForm();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to delete student');
+                });
+            }
+        }
+
+        function clearUpdateForm() {
+            document.getElementById('update_id').value = '';
+            document.getElementById('update_first_name').value = '';
+            document.getElementById('update_last_name').value = '';
+            document.getElementById('update_dob').value = '';
+            document.getElementById('update_amount_due').value = '';
+        }
+
+        window.onload = function() {
+            fetchStudents();
+        };
+    </script>
+</head>
+<body>
+    <h3> AI in Enterprise Systems - Assignment 3 </h3>
+    <h4> Srushti Gupta (100947615) </h4>
+    <h4> Dhruvi Kapadia (100947354) </h4>
+    <h1>Welcome to the Student Records Application</h1>
+    <form id="studentForm" onsubmit="event.preventDefault(); addStudent();">
+        <label for="first_name">First Name:</label>
+        <input type="text" id="first_name" name="first_name" required><br>
+        <label for="last_name">Last Name:</label>
+        <input type="text" id="last_name" name="last_name" required><br>
+        <label for="dob">Date of Birth:</label>
+        <input type="date" id="dob" name="dob" required><br>
+        <label for="amount_due">Amount Due:</label>
+        <input type="number" id="amount_due" name="amount_due" required><br>
+        <button type="submit">Add Student</button>
+    </form>
+
+    <h2>Student List</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Date of Birth</th>
+                <th>Amount Due</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="studentTableBody"></tbody>
+    </table>
+
+    <h2>Update Student</h2>
+    <div class="search-container">
+        <input type="text" id="search_first_name" name="search_first_name" placeholder="Enter First Name to Search" required>
+        <button onclick="searchAndUpdate()">Search</button>
+    </div>
+    <form id="updateStudentForm" onsubmit="event.preventDefault(); updateStudent();">
+        <input type="hidden" id="update_id" name="update_id">
+        <label for="update_first_name">First Name:</label>
+        <input type="text" id="update_first_name" name="update_first_name" required><br>
+        <label for="update_last_name">Last Name:</label>
+        <input type="text" id="update_last_name" name="update_last_name" required><br>
+        <label for="update_dob">Date of Birth:</label>
+        <input type="date" id="update_dob" name="update_dob" required><br>
+        <label for="update_amount_due">Amount Due:</label>
+        <input type="number" id="update_amount_due" name="update_amount_due" required><br>
+        <button type="submit">Update Student</button>
+    </form>
+</body>
+</html>
